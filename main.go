@@ -17,14 +17,16 @@ func main() {
 	hostsFile := flag.String("hosts", "", "Custom hosts file (one host per line)")
 	sniFile := flag.String("sni", "", "Custom SNI list file (one SNI per line)")
 	portsStr := flag.String("ports", "", "Custom ports (comma-separated, e.g. '80,443,8080')")
-	timeoutSec := flag.Int("timeout", 10, "Connection timeout in seconds")
+	timeoutSec := flag.Int("timeout", 5, "Connection timeout in seconds")
 	concurrency := flag.Int("concurrency", 50, "Max concurrent connections")
 	skipDNS := flag.Bool("skip-dns", false, "Skip DNS enumeration phase")
 	skipPort := flag.Bool("skip-port", false, "Skip port scanning phase")
 	skipSNI := flag.Bool("skip-sni", false, "Skip SNI testing phase")
 	skipWS := flag.Bool("skip-ws", false, "Skip WebSocket testing phase")
 	skipFwd := flag.Bool("skip-fwd", false, "Skip forwarding test phase")
-	useTLS := flag.Bool("tls", true, "Use TLS (wss/https) for WS and forwarding tests")
+	skipWild := flag.Bool("skip-wildcard", false, "Skip wildcard host testing phase")
+	useTLS := flag.Bool("tls", false, "Use TLS (wss/https) for WS and forwarding tests (default false for NTLS)")
+	wildcardServers := flag.String("wildcard-servers", "", "Custom wildcard server domains (comma-separated)")
 	outputJSON := flag.String("o", "", "Output JSON report to file")
 	listOps := flag.Bool("list-operators", false, "List known operators and exit")
 	flag.Parse()
@@ -43,14 +45,14 @@ func main() {
 	report := scanner.NewScanReport()
 
 	fmt.Println("\n╔══════════════════════════════════════╗")
-	fmt.Println("║      BUG SCANNER v1.0                 ║")
+	fmt.Println("║      BUG SCANNER v2.0                 ║")
 	fmt.Println("╚══════════════════════════════════════╝")
 	fmt.Printf("  Operator: %s\n", *operator)
 	fmt.Printf("  Timeout:  %ds\n", *timeoutSec)
 	fmt.Printf("  Workers:  %d\n", *concurrency)
 
 	// Phase 0: Region detection
-	fmt.Println("\n[0/6] Detecting region...")
+	fmt.Println("\n[0/7] Detecting region...")
 	region, err := scanner.DetectRegion()
 	if err != nil {
 		fmt.Printf("  ⚠ Region detection failed: %v\n", err)
@@ -63,7 +65,7 @@ func main() {
 	}
 
 	// Phase 1: ASN lookup
-	fmt.Println("\n[1/6] ASN lookup...")
+	fmt.Println("\n[1/7] ASN lookup...")
 	asnQ := *asnQuery
 	if asnQ == "" {
 		asnQ = *operator
@@ -86,7 +88,7 @@ func main() {
 
 	// Phase 2: DNS enumeration
 	if !*skipDNS {
-		fmt.Println("\n[2/6] DNS enumeration...")
+		fmt.Println("\n[2/7] DNS enumeration...")
 		domains := scanner.GetOperatorDomains(*operator)
 		domains = append(domains, scanner.CommonWhitelistDomains...)
 		dns := *customDNS
@@ -124,7 +126,7 @@ func main() {
 
 	// Phase 3: Port scan
 	if !*skipPort && len(hosts) > 0 {
-		fmt.Println("\n[3/6] Port scanning...")
+		fmt.Println("\n[3/7] Port scanning...")
 		fmt.Printf("  Hosts: %d, Ports: %d\n", len(hosts), len(ports))
 		portResults := scanner.ScanPorts(hosts, ports, timeout, *concurrency)
 		report.PortResults = portResults
@@ -144,7 +146,7 @@ func main() {
 
 	// Phase 4: SNI testing
 	if !*skipSNI && len(hosts) > 0 && len(sniList) > 0 {
-		fmt.Println("\n[4/6] SNI testing...")
+		fmt.Println("\n[4/7] SNI testing...")
 		fmt.Printf("  Hosts: %d, SNI: %d\n", len(hosts), len(sniList))
 		sniResults := scanner.TestSNIBatch(hosts, ports, sniList, timeout, *concurrency)
 		report.SNIResults = sniResults
@@ -161,7 +163,7 @@ func main() {
 
 	// Phase 5: WebSocket testing
 	if !*skipWS && len(hosts) > 0 {
-		fmt.Println("\n[5/6] WebSocket testing...")
+		fmt.Println("\n[5/7] WebSocket testing...")
 		wsPaths := scanner.DefaultWSPaths()
 		fmt.Printf("  Hosts: %d, Paths: %d, TLS: %v\n", len(hosts), len(wsPaths), *useTLS)
 		wsResults := scanner.TestWSBatch(hosts, ports, wsPaths, sniList, *useTLS, timeout, *concurrency)
@@ -179,7 +181,7 @@ func main() {
 
 	// Phase 6: Forwarding test
 	if !*skipFwd && len(hosts) > 0 {
-		fmt.Println("\n[6/6] Forwarding test...")
+		fmt.Println("\n[6/7] Forwarding test...")
 		fmt.Printf("  Hosts: %d, TLS: %v\n", len(hosts), *useTLS)
 		fwdResults := scanner.TestForwardingBatch(hosts, ports, sniList, *useTLS, timeout, *concurrency)
 		report.FwdResults = fwdResults
@@ -191,6 +193,35 @@ func main() {
 				break
 			}
 			fmt.Printf("    %s:%d (SNI=%s, status=%d, %dms)\n", r.Host, r.Port, r.SNI, r.Status, r.Latency)
+		}
+	}
+
+	// Phase 7: Wildcard host testing
+	if !*skipWild && len(sniList) > 0 {
+		fmt.Println("\n[7/7] Wildcard host testing...")
+		wildServers := scanner.CommonWildcardServers
+		if *wildcardServers != "" {
+			wildServers = strings.Split(*wildcardServers, ",")
+			for i, s := range wildServers {
+				wildServers[i] = strings.TrimSpace(s)
+			}
+		}
+		wildPorts := []int{80, 443, 8080, 8443, 2052, 2083, 8880}
+		wildPaths := scanner.CommonWSWildcardPaths
+		fmt.Printf("  Whitelist hosts: %d, Wildcard servers: %d, Ports: %d, Paths: %d\n",
+			len(sniList), len(wildServers), len(wildPorts), len(wildPaths))
+		fmt.Printf("  Total combinations: %d\n", len(sniList)*len(wildServers)*len(wildPorts)*len(wildPaths))
+		wildResults := scanner.TestWildcardBatch(sniList, wildServers, wildPorts, wildPaths, timeout, *concurrency)
+		report.WildResults = wildResults
+		success := scanner.FilterSuccessfulWildcard(wildResults)
+		fmt.Printf("  ✅ Wildcard bugs: %d/%d\n", len(success), len(wildResults))
+		for i, r := range success {
+			if i >= 20 {
+				fmt.Printf("    ... and %d more\n", len(success)-20)
+				break
+			}
+			fmt.Printf("    🐛 %s:%d%s → Host: %s (%dms, status=%d)\n",
+				r.WhitelistHost, r.Port, r.WSPath, r.WildcardHost, r.Latency, r.Status)
 		}
 	}
 
@@ -331,6 +362,21 @@ func collectBugs(report *scanner.ScanReport) []scanner.BugResult {
 			Host:      r.Host,
 			Port:      r.Port,
 			SNI:       r.SNI,
+			LatencyMs: r.Latency,
+			Region:    regionStr,
+			ExitIP:    exitIP,
+			Works:     true,
+			FoundAt:   report.Timestamp,
+		})
+	}
+
+	for _, r := range scanner.FilterSuccessfulWildcard(report.WildResults) {
+		bugs = append(bugs, scanner.BugResult{
+			Type:      scanner.BugTypeWildcard,
+			Host:      r.WhitelistHost,
+			Port:      r.Port,
+			SNI:       r.WildcardHost,
+			WSPath:    r.WSPath,
 			LatencyMs: r.Latency,
 			Region:    regionStr,
 			ExitIP:    exitIP,

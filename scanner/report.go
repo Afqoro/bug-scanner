@@ -18,8 +18,9 @@ type ScanReport struct {
 	PortResults  []PortResult   `json:"port_results,omitempty"`
 	SNIResults   []SNITestResult `json:"sni_results,omitempty"`
 	WSResults    []WSTestResult  `json:"ws_results,omitempty"`
-	FwdResults   []ForwardResult `json:"forward_results,omitempty"`
-	Bugs         []BugResult    `json:"bugs,omitempty"`
+	FwdResults    []ForwardResult  `json:"forward_results,omitempty"`
+	WildResults   []WildcardResult `json:"wildcard_results,omitempty"`
+	Bugs          []BugResult      `json:"bugs,omitempty"`
 	Summary      ScanSummary    `json:"summary"`
 }
 
@@ -47,6 +48,10 @@ func (r *ScanReport) ComputeSummary() {
 	r.Summary.TotalWS = len(FilterSuccessfulWS(r.WSResults))
 	r.Summary.TotalFwd = len(FilterSuccessfulForward(r.FwdResults))
 	r.Summary.TotalBugs = len(r.Bugs)
+	// count wildcard too
+	if len(r.WildResults) > 0 {
+		r.Summary.TotalFwd += len(FilterSuccessfulWildcard(r.WildResults))
+	}
 }
 
 // SaveJSON writes the report to a JSON file

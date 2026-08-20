@@ -14,6 +14,7 @@ const (
 	BugTypeWebSocket  BugType = "websocket"
 	BugTypeHTTPProxy  BugType = "http_proxy"
 	BugTypeForwarding BugType = "forwarding"
+	BugTypeWildcard   BugType = "wildcard"
 )
 
 // BugResult represents a confirmed working bug
@@ -66,6 +67,8 @@ func (s BugResult) String() string {
 		detail = fmt.Sprintf("WS=%s:%d%s", s.Host, s.Port, s.WSPath)
 	case BugTypeHTTPProxy:
 		detail = fmt.Sprintf("Proxy=%s:%d", s.Host, s.Port)
+	case BugTypeWildcard:
+		detail = fmt.Sprintf("WILD=%s:%d%s (host=%s)", s.Host, s.Port, s.WSPath, s.SNI)
 	default:
 		detail = fmt.Sprintf("%s:%d", s.Host, s.Port)
 	}
