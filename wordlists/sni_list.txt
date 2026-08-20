@@ -1,0 +1,66 @@
+# SNI candidates for spoofing tests
+# These are domains commonly whitelisted by operators
+# Lines starting with # are ignored
+
+# Connectivity checks (almost always free)
+connectivitycheck.gstatic.com
+detectportal.firefox.com
+connectivitycheck.android.com
+
+# Social media (commonly in social packages)
+www.facebook.com
+m.facebook.com
+graph.facebook.com
+edge-chat.facebook.com
+static.xx.fbcdn.net
+video.xx.fbcdn.net
+www.instagram.com
+graph.instagram.com
+scontent.cdninstagram.com
+www.tiktokv.com
+api.tiktokv.com
+mssdk.tiktokv.com
+
+# Messaging
+www.whatsapp.net
+g.whatsapp.net
+e1.whatsapp.net
+static.whatsapp.net
+
+# Google services
+www.google.com
+www.youtube.com
+i.ytimg.com
+googlevideo.com
+play.google.com
+android.clients.google.com
+www.googleapis.com
+fonts.gstatic.com
+fonts.googleapis.com
+
+# Streaming
+api.spotify.com
+www.netflix.com
+nflxvideo.net
+www.disneyplus.com
+
+# Telegram
+telegram.org
+api.telegram.org
+cdn.telegram.org
+
+# Cloudflare
+dns.google
+cloudflare-dns.com
+www.cloudflare.com
+
+# Twitter/X
+api.twitter.com
+api.x.com
+abs.twimg.com
+pbs.twimg.com
+
+# LINE
+scdn.line-apps.com
+tim.line.me
+obs.line.me
