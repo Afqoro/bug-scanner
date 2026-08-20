@@ -47,27 +47,15 @@ var CommonWildcardServers = []string{
 }
 
 // Common WS paths used by wildcard configs
+// Note: path is server-side config, not operator-related.
+// We test with "/" as the minimal probe — if the wildcard host responds,
+// the user can configure any path they want on their own xray server.
 var CommonWSWildcardPaths = []string{
-	"/alhamdulillah",
+	"/",
+	"/ws",
 	"/vmess",
 	"/vless",
 	"/trojan",
-	"/wss",
-	"/ws",
-	"/tunnel",
-	"/proxy",
-	"/bug",
-	"/forward",
-	"/ssh",
-	"/vpn",
-	"/fastssh",
-	"/quila",
-	"/buyung",
-	"/alhamdulillah1",
-	"/alhamdulillah2",
-	"/mahavpn",
-	"/jagoan",
-	"/creatif",
 }
 
 // TestWildcard tests a wildcard host combination.
